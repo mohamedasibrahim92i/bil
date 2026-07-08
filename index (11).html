@@ -1,0 +1,810 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarVA PV Systems — Quotation, Invoice and Receipt Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; color: #1f2937; line-height: 1.5; }
+
+  .app-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .app-header { text-align: center; margin-bottom: 28px; padding: 24px; background: linear-gradient(135deg, #1b4332, #081c15); border-radius: 12px; color: white; }
+  .app-header h1 { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+  .app-header p { color: rgba(255,255,255,0.8); font-size: 14px; margin-top: 6px; }
+
+  .lang-toggle { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+  .lang-btn { padding: 8px 20px; border-radius: 8px; border: 1.5px solid #1b4332; background: white; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; color: #1b4332; }
+  .lang-btn.active { background: #1b4332; color: white; }
+  .lang-btn:hover:not(.active) { background: rgba(27,67,50,0.06); }
+
+  .doc-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; background: white; padding: 0 8px; border-radius: 12px 12px 0 0; }
+  .doc-tab { padding: 14px 24px; cursor: pointer; font-size: 14px; font-weight: 600; border-bottom: 3px solid transparent; transition: all 0.2s; background: none; border: none; color: #6b7280; }
+  .doc-tab.active { color: #1b4332; border-bottom: 3px solid #1b4332; }
+  .doc-tab:hover { color: #1b4332; }
+
+  .form-section { background: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; }
+  .form-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1b4332; display: flex; align-items: center; gap: 8px; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 13px; color: #4b5563; font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea {
+    padding: 10px 14px; border: 1.5px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; background: #fff; color: #1f2937;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none; border-color: #1b4332; box-shadow: 0 0 0 3px rgba(27,67,50,0.1);
+  }
+  .form-group textarea { resize: vertical; min-height: 64px; }
+  .form-group input::placeholder, .form-group textarea::placeholder { color: #9ca3af; }
+
+  .items-table { border-collapse: collapse; margin-top: 12px; border-radius: 8px; overflow: hidden; width: 100%; }
+  .items-table th, .items-table td { padding: 12px 14px; text-align: left; font-size: 13px; border-bottom: 1px solid #e5e7eb; }
+  .items-table th { font-weight: 600; color: #1b4332; background: #f3f4f6; }
+  .items-table td input { min-width: 60px; padding: 8px 10px; border: 1.5px solid #d1d5db; border-radius: 6px; font-size: 13px; background: #fff; width: 100%; }
+  .items-table td input:focus { border-color: #1b4332; outline: none; }
+  .items-table td input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
+  .items-table .num-col { text-align: right; }
+  .items-table .center-col { text-align: center; }
+  .items-table .action-col { width: 40px; text-align: center; }
+  .btn-remove { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 20px; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; opacity: 0; }
+  .items-table tr:hover .btn-remove { opacity: 1; }
+  .btn-remove:hover { background: #ffebee; }
+
+  .btn-add { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 12px; transition: all 0.2s; }
+  .btn-add:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  .totals-box { background: #f9fafb; border-radius: 10px; padding: 20px; margin-top: 16px; border: 1px solid #e5e7eb; }
+  .totals-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; color: #4b5563; }
+  .totals-row.total { font-weight: 700; font-size: 20px; color: #1b4332; border-top: 2px solid #1b4332; margin-top: 10px; padding-top: 12px; }
+  .totals-row .value { font-variant-numeric: tabular-nums; font-weight: 500; }
+
+  .action-bar { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+  .btn-primary { padding: 14px 32px; background: #1b4332; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 8px rgba(27,67,50,0.2); }
+  .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); }
+  .btn-secondary { padding: 14px 32px; background: white; color: #1b4332; border: 1.5px solid #1b4332; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s; }
+  .btn-secondary:hover { background: rgba(27,67,50,0.06); }
+  .btn-success { padding: 14px 32px; background: #16a34a; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s; }
+  .btn-success:hover { opacity: 0.9; }
+
+  .doc-preview { display: none; background: white; border: 1px solid #d1d5db; border-radius: 4px; margin-top: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+  .doc-preview.active { display: block; }
+  .doc-page { padding: 48px 56px; min-height: 1000px; position: relative; max-width: 900px; margin: 0 auto; }
+
+  .letterhead { border-bottom: 3px double #1b4332; padding-bottom: 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 20px; }
+  .crest-wrap { flex-shrink: 0; }
+  .crest-svg { width: 80px; height: 80px; }
+  .company-info h2 { font-size: 22px; font-weight: 700; color: #1b4332; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .company-info .sub { font-size: 13px; color: #4b5563; line-height: 1.6; }
+  .company-info .ssm { font-size: 12px; color: #6b7280; margin-top: 4px; font-weight: 500; }
+  .company-info .tagline { font-size: 11px; color: #52b788; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+  .doc-meta { display: flex; justify-content: space-between; margin-bottom: 24px; font-size: 13px; gap: 40px; }
+  .doc-meta .left, .doc-meta .right { line-height: 1.9; }
+  .doc-meta .right { text-align: right; min-width: 220px; }
+  .doc-meta strong { color: #1b4332; font-weight: 600; }
+  .doc-meta .cust-name { font-size: 15px; font-weight: 700; color: #1f2937; margin: 4px 0; }
+
+  .doc-title { text-align: center; font-size: 24px; font-weight: 800; color: #1b4332; margin: 28px 0 20px; text-transform: uppercase; letter-spacing: 3px; border-bottom: 2px solid #1b4332; padding-bottom: 10px; }
+  .doc-subtitle { text-align: center; font-size: 13px; color: #6b7280; margin-top: -14px; margin-bottom: 20px; letter-spacing: 1px; }
+
+  .preview-table { border-collapse: collapse; margin: 20px 0; font-size: 13px; width: 100%; }
+  .preview-table th { background: #1b4332; color: white; padding: 12px 14px; text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .preview-table td { padding: 12px 14px; border-bottom: 1px solid #e5e7eb; color: #374151; }
+  .preview-table .right { text-align: right; }
+  .preview-table .center { text-align: center; }
+  .preview-table tr:nth-child(even) { background: #f9fafb; }
+  .preview-table .desc-cell { font-weight: 500; }
+
+  .preview-totals { margin-top: 20px; border-top: 2px solid #1b4332; padding-top: 14px; max-width: 340px; margin-left: auto; }
+  .preview-totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: #4b5563; }
+  .preview-totals .row.grand { font-weight: 800; font-size: 18px; color: #1b4332; border-top: 1px solid #d1d5db; margin-top: 8px; padding-top: 10px; }
+  .preview-totals .row .val { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .terms-box { margin-top: 28px; padding: 20px; background: #f9fafb; border-radius: 8px; font-size: 12px; line-height: 1.8; color: #4b5563; border-left: 4px solid #1b4332; }
+  .terms-box h4 { color: #1b4332; margin-bottom: 10px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .terms-box pre { font-family: inherit; white-space: pre-wrap; word-wrap: break-word; }
+
+  .bank-box { margin-top: 20px; padding: 16px; background: #d8f3dc; border-radius: 8px; font-size: 13px; line-height: 1.8; color: #1b4332; border: 1px solid #52b788; }
+  .bank-box h4 { color: #1b4332; margin-bottom: 8px; font-size: 13px; font-weight: 700; }
+  .bank-box pre { font-family: inherit; white-space: pre-wrap; word-wrap: break-word; }
+
+  .signature-area { margin-top: 48px; display: flex; justify-content: space-between; gap: 40px; }
+  .sig-box { flex: 1; max-width: 260px; text-align: center; }
+  .sig-line { border-top: 1.5px solid #1b4332; margin-top: 56px; padding-top: 8px; font-size: 12px; font-weight: 600; color: #374151; }
+  .sig-box .role { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .sig-box .date-line { margin-top: 32px; font-size: 11px; color: #6b7280; }
+
+  .footer-stamp { margin-top: 36px; text-align: center; font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 14px; line-height: 1.8; }
+  .footer-stamp strong { color: #1b4332; font-size: 12px; }
+
+  .watermark-paid { position: absolute; top: 400px; left: 50%; transform: translateX(-50%) rotate(-25deg); font-size: 80px; font-weight: 900; color: rgba(27,67,50,0.10); text-transform: uppercase; pointer-events: none; letter-spacing: 10px; border: 4px solid rgba(27,67,50,0.10); padding: 20px 40px; border-radius: 8px; }
+
+  .hidden { display: none !important; }
+  .template-selector { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .template-chip { padding: 6px 14px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .template-chip:hover { background: #1b4332; color: white; border-color: #1b4332; }
+  .sst-toggle-wrap { display: flex; align-items: center; gap: 8px; }
+  .sst-toggle-wrap input[type="checkbox"] { width: 18px; height: 18px; accent-color: #1b4332; cursor: pointer; }
+
+  @media print {
+    body * { visibility: hidden; }
+    .doc-preview, .doc-preview * { visibility: visible; }
+    .doc-preview { position: absolute; left: 0; top: 0; right: 0; border: none; box-shadow: none; margin: 0; }
+    .doc-page { padding: 30px 40px; }
+    .no-print { display: none !important; }
+  }
+
+  @media (max-width: 768px) {
+    .app-container { padding: 12px; }
+    .doc-page { padding: 24px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .doc-meta { flex-direction: column; gap: 16px; }
+    .doc-meta .right { text-align: left; }
+    .signature-area { flex-direction: column; align-items: center; }
+    .action-bar { flex-direction: column; }
+    .action-bar button { display: block; width: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <div class="app-header no-print">
+    <h1 id="appTitle">SolarVA PV Systems — Quotation and Invoice Generator</h1>
+    <p id="appSubtitle">Professional Solar PV Documentation for the Malaysian Market</p>
+  </div>
+
+  <div class="lang-toggle no-print">
+    <button class="lang-btn active" data-lang="en" onclick="setLang('en')">English</button>
+    <button class="lang-btn" data-lang="ms" onclick="setLang('ms')">Bahasa Melayu</button>
+    <button class="lang-btn" data-lang="both" onclick="setLang('both')">EN + BM</button>
+  </div>
+
+  <div class="doc-tabs no-print">
+    <button class="doc-tab active" data-tab="quotation" onclick="setTab('quotation')">Quotation / Sebut Harga</button>
+    <button class="doc-tab" data-tab="invoice" onclick="setTab('invoice')">Invoice / Invois</button>
+    <button class="doc-tab" data-tab="receipt" onclick="setTab('receipt')">Receipt / Resit</button>
+  </div>
+
+  <div class="form-section no-print">
+    <h3><span style="font-size:18px;">🏢</span> <span id="secCompany">Company Information / Maklumat Syarikat</span></h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label id="lblCompanyName">Company Name</label>
+        <input type="text" id="companyName" value="SolarVA PV Systems (MK Rich Sdn Bhd)">
+      </div>
+      <div class="form-group">
+        <label id="lblSSM">SSM Registration No.</label>
+        <input type="text" id="ssmNo" value="201703436477">
+      </div>
+      <div class="form-group">
+        <label id="lblRegAddr">Registered Address</label>
+        <textarea id="regAddress">No. 25, Jalan Teknologi 3/4,
+Taman Sains Selangor,
+47100 Puchong, Selangor, Malaysia</textarea>
+      </div>
+      <div class="form-group">
+        <label id="lblPhone">Phone / Telefon</label>
+        <input type="text" id="companyPhone" value="+60 3-XXXX XXXX">
+      </div>
+      <div class="form-group">
+        <label id="lblEmail">Email</label>
+        <input type="text" id="companyEmail" value="info@solarva.com.my">
+      </div>
+      <div class="form-group">
+        <label id="lblWebsite">Website</label>
+        <input type="text" id="companyWebsite" value="www.solarva.com.my">
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section no-print">
+    <h3><span style="font-size:18px;">👤</span> <span id="secCustomer">Customer Information / Maklumat Pelanggan</span></h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label id="lblCustName">Customer / Company Name</label>
+        <input type="text" id="custName" placeholder="e.g. Ahmad bin Abdullah / Syarikat ABC Sdn Bhd">
+      </div>
+      <div class="form-group">
+        <label id="lblCustIC">IC / Business Reg No.</label>
+        <input type="text" id="custIC" placeholder="e.g. 880101-14-XXXX / 1234567-X">
+      </div>
+      <div class="form-group">
+        <label id="lblCustAddr">Address</label>
+        <textarea id="custAddress" placeholder="Full billing address / Alamat penuh"></textarea>
+      </div>
+      <div class="form-group">
+        <label id="lblCustPhone">Phone / Telefon</label>
+        <input type="text" id="custPhone" placeholder="+60 XX-XXX XXXX">
+      </div>
+      <div class="form-group">
+        <label id="lblCustEmail">Email</label>
+        <input type="text" id="custEmail" placeholder="customer@email.com">
+      </div>
+      <div class="form-group">
+        <label id="lblProjectSite">Project Site / Lokasi Projek</label>
+        <input type="text" id="projectSite" placeholder="If different from billing address">
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section no-print">
+    <h3><span style="font-size:18px;">📄</span> <span id="secDoc">Document Details / Butiran Dokumen</span></h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label id="lblDocNo">Document No. / No. Dokumen</label>
+        <input type="text" id="docNo" placeholder="QT-2026-0001">
+      </div>
+      <div class="form-group">
+        <label id="lblDate">Date / Tarikh</label>
+        <input type="date" id="docDate">
+      </div>
+      <div class="form-group" id="validityGroup">
+        <label id="lblValidity">Validity (days) / Sah (hari)</label>
+        <input type="number" id="validityDays" value="30" min="1">
+      </div>
+      <div class="form-group hidden" id="dueDateGroup">
+        <label id="lblDueDate">Due Date / Tarikh Matang</label>
+        <input type="date" id="dueDate">
+      </div>
+      <div class="form-group hidden" id="paymentMethodGroup">
+        <label id="lblPayMethod">Payment Method / Kaedah Bayaran</label>
+        <select id="paymentMethod">
+          <option value="Bank Transfer">Bank Transfer / Pindahan Bank</option>
+          <option value="Cash">Cash / Tunai</option>
+          <option value="Cheque">Cheque / Cek</option>
+          <option value="Online Banking">Online Banking / Perbankan Dalam Talian</option>
+          <option value="Credit Card">Credit Card / Kad Kredit</option>
+        </select>
+      </div>
+      <div class="form-group hidden" id="bankDetailsGroup">
+        <label id="lblBank">Bank Account Details / Butiran Akaun Bank</label>
+        <textarea id="bankDetails" placeholder="Bank: Maybank&#10;A/C Name: MK Rich Sdn Bhd&#10;A/C No: 5123 4567 8901&#10;Swift: MBBEMYKL"></textarea>
+      </div>
+      <div class="form-group hidden" id="receiptNoGroup">
+        <label id="lblReceiptNo">Receipt No. / No. Resit</label>
+        <input type="text" id="receiptNo" placeholder="RC-2026-0001">
+      </div>
+      <div class="form-group hidden" id="paidAmountGroup">
+        <label id="lblPaid">Amount Paid (MYR) / Jumlah Dibayar</label>
+        <input type="number" id="paidAmount" value="0" step="0.01" min="0">
+      </div>
+      <div class="form-group hidden" id="refInvoiceGroup">
+        <label id="lblRefInvoice">Reference Invoice No. / No. Invois Rujukan</label>
+        <input type="text" id="refInvoice" placeholder="IV-2026-0001">
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section no-print">
+    <h3><span style="font-size:18px;">📦</span> <span id="secItems">Items and Services / Barangan and Perkhidmatan</span></h3>
+    <div class="template-selector">
+      <span style="font-size:12px;color:#6b7280;font-weight:500;">Quick Add:</span>
+      <button class="template-chip" onclick="addTemplate('panel')">Solar Panel</button>
+      <button class="template-chip" onclick="addTemplate('inverter')">Inverter</button>
+      <button class="template-chip" onclick="addTemplate('mounting')">Mounting</button>
+      <button class="template-chip" onclick="addTemplate('cable')">Cables</button>
+      <button class="template-chip" onclick="addTemplate('installation')">Installation</button>
+      <button class="template-chip" onclick="addTemplate('netmeter')">Net Metering</button>
+      <button class="template-chip" onclick="addTemplate('maintenance')">Maintenance</button>
+    </div>
+    <table class="items-table" id="itemsTable">
+      <thead>
+        <tr>
+          <th id="thNo">#</th>
+          <th id="thDesc">Description / Penerangan</th>
+          <th id="thQty" class="center-col">Qty</th>
+          <th id="thUnit" class="num-col">Unit Price (MYR)</th>
+          <th id="thDisc" class="center-col">Disc %</th>
+          <th id="thAmount" class="num-col">Amount (MYR)</th>
+          <th class="action-col"></th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody">
+        <tr>
+          <td>1</td>
+          <td><input type="text" class="item-desc" value="Solar Panel 550W Mono PERC (Tier 1)"></td>
+          <td class="center-col"><input type="number" class="item-qty" value="10" min="0" step="1"></td>
+          <td class="num-col"><input type="number" class="item-price" value="850.00" min="0" step="0.01"></td>
+          <td class="center-col"><input type="number" class="item-disc" value="5" min="0" max="100" step="0.01"></td>
+          <td class="item-amount num-col">0.00</td>
+          <td class="action-col"><button class="btn-remove" onclick="removeRow(this)">×</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <button class="btn-add" onclick="addRow()">+ Add Item / Tambah Barangan</button>
+
+    <div class="totals-box">
+      <div class="totals-row"><span id="lblSubtotal">Subtotal / Jumlah Kasar</span><span class="value" id="subtotal">MYR 0.00</span></div>
+      <div class="totals-row">
+        <span id="lblSST">SST (10%) / SST (10%)</span>
+        <span class="sst-toggle-wrap"><input type="checkbox" id="sstToggle" checked onchange="calculate()"><span class="value" id="sstAmount">MYR 0.00</span></span>
+      </div>
+      <div class="totals-row total"><span id="lblGrand">Grand Total / Jumlah Keseluruhan</span><span class="value" id="grandTotal">MYR 0.00</span></div>
+    </div>
+  </div>
+
+  <div class="form-section no-print">
+    <h3><span style="font-size:18px;">📝</span> <span id="secTerms">Terms and Conditions / Terma and Syarat</span></h3>
+    <div class="form-group">
+      <textarea id="termsText" rows="8" style="font-family:inherit;">1. Quotation valid for 30 days from date of issue / Sebut harga sah untuk 30 hari dari tarikh dikeluarkan.
+2. 50% deposit required upon confirmation / Deposit 50% diperlukan semasa pengesahan.
+3. Balance payable upon completion and handover / Baki perlu dibayar selepas siap and serah.
+4. Price includes supply, installation, and commissioning / Harga termasuk pembekalan, pemasangan, and pentauliahan.
+5. Warranty: 25 years on panels, 10 years on inverter, 1 year workmanship / Waranti: 25 tahun panel, 10 tahun inverter, 1 tahun kerja tangan.
+6. SEDA/Green Building Index compliance where applicable / Pematuhan SEDA/GBI di mana berkenaan.
+7. All works subject to site assessment and TNB approval / Semua kerja tertakluk kepada penilaian tapak and kelulusan TNB.
+8. Prices quoted in Malaysian Ringgit (MYR) / Harga dalam Ringgit Malaysia (MYR).
+9. Late payment subject to 1.5% monthly interest / Bayaran lewat tertakluk kepada faedah 1.5% sebulan.</textarea>
+    </div>
+  </div>
+
+  <div class="action-bar no-print">
+    <button class="btn-primary" onclick="generatePreview()">Generate Preview / Jana Pratonton</button>
+    <button class="btn-secondary" onclick="window.print()">Print / Cetak</button>
+    <button class="btn-success" onclick="downloadHTML()">Download HTML / Muat Turun</button>
+    <button class="btn-secondary" onclick="resetForm()">Reset / Tetap Semula</button>
+  </div>
+
+  <div class="doc-preview" id="docPreview">
+    <div class="doc-page" id="previewContent"></div>
+  </div>
+</div>
+
+<script>
+const CREST_SVG = `<svg class="crest-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" style="stop-color:#1b4332"/>
+      <stop offset="1" style="stop-color:#081c15"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="#d8f3dc" stroke="#52b788" stroke-width="2"/>
+  <g transform="translate(50,50)">
+    <path d="M-24,-20 L24,-20 L24,10 Q24,26 0,34 Q-24,26 -24,10 Z" fill="url(#shieldGrad)" stroke="#52b788" stroke-width="1.5"/>
+    <path d="M-8,-8 A10,10 0 1,1 -8,12 A7.5,7.5 0 1,0 -8,-8" fill="#95d5b2"/>
+    <polygon points="10,-5 12.5,2.5 19,2.5 13.5,7.5 15.5,14 10,10 4.5,14 6.5,7.5 1,2.5 7.5,2.5" fill="#95d5b2"/>
+    <ellipse cx="-14" cy="22" rx="7" ry="3.5" fill="#52b788" opacity="0.9"/>
+    <ellipse cx="14" cy="22" rx="7" ry="3.5" fill="#52b788" opacity="0.9"/>
+    <path d="M0,10 L0,28" stroke="#52b788" stroke-width="2"/>
+    <path d="M-4,28 L4,28 L0,32 Z" fill="#52b788"/>
+    <circle cx="0" cy="-14" r="3" fill="#95d5b2"/>
+  </g>
+  <text x="50" y="94" text-anchor="middle" font-size="6.5" fill="#1b4332" font-weight="700" font-family="serif">BERSEKUTU BERTAMBAH MUTU</text>
+</svg>`;
+
+const TEMPLATES = {
+  panel: { desc: "Solar Panel 550W Mono PERC (Tier 1 Manufacturer)", qty: 10, price: 850, disc: 5 },
+  inverter: { desc: "Solar Inverter 10kW Hybrid (3-phase)", qty: 1, price: 6500, disc: 0 },
+  mounting: { desc: "Aluminium Mounting Structure and Rails (Complete Set)", qty: 1, price: 2800, disc: 0 },
+  cable: { desc: "DC/AC Solar Cables, MC4 Connectors and Junction Box", qty: 1, price: 1200, disc: 0 },
+  installation: { desc: "Professional Installation, Wiring and Commissioning", qty: 1, price: 4500, disc: 0 },
+  netmeter: { desc: "TNB Net Metering Application and SEDA Documentation", qty: 1, price: 1500, disc: 0 },
+  maintenance: { desc: "Annual Maintenance Contract (1 Year)", qty: 1, price: 800, disc: 0 },
+};
+
+const TEXTS = {
+  en: {
+    appTitle: "SolarVA PV Systems — Quotation and Invoice Generator",
+    appSubtitle: "Professional Solar PV Documentation for the Malaysian Market",
+    secCompany: "Company Information",
+    secCustomer: "Customer Information",
+    secDoc: "Document Details",
+    secItems: "Items and Services",
+    secTerms: "Terms and Conditions",
+    lblCompanyName: "Company Name", lblSSM: "SSM Registration No.", lblRegAddr: "Registered Address",
+    lblPhone: "Phone", lblEmail: "Email", lblWebsite: "Website",
+    lblCustName: "Customer / Company Name", lblCustIC: "IC / Business Reg No.", lblCustAddr: "Address",
+    lblCustPhone: "Phone", lblCustEmail: "Email", lblProjectSite: "Project Site",
+    lblDocNo: "Document No.", lblDate: "Date", lblValidity: "Validity (days)",
+    lblDueDate: "Due Date", lblPayMethod: "Payment Method", lblBank: "Bank Account Details",
+    lblReceiptNo: "Receipt No.", lblPaid: "Amount Paid (MYR)", lblRefInvoice: "Reference Invoice No.",
+    thNo: "#", thDesc: "Description", thQty: "Qty", thUnit: "Unit Price (MYR)", thDisc: "Disc %", thAmount: "Amount (MYR)",
+    lblSubtotal: "Subtotal", lblSST: "SST (10%)", lblGrand: "Grand Total",
+    quotation: "Quotation", invoice: "Tax Invoice", receipt: "Official Receipt",
+    docTo: "To", docFrom: "From", docNo: "Doc No.", docDate: "Date",
+    validUntil: "Valid Until", dueDate: "Due Date", payMethod: "Payment Method",
+    bankDetails: "Bank Details", receiptNo: "Receipt No.", amountPaid: "Amount Paid", balance: "Balance",
+    thankYou: "Thank you for your business!",
+    authorizedBy: "Authorized Signature and Company Stamp",
+    customerSign: "Customer Signature and Date",
+    page: "Page", of: "of",
+    subtotal: "Subtotal", sst: "SST (10%)", grandTotal: "Grand Total",
+    termsTitle: "Terms and Conditions",
+    warranty: "Warranty", notes: "Notes",
+    paidStamp: "PAID",
+    ssmLabel: "SSM No.", companyReg: "(Co. No. 201703436477-D)",
+    taxInvoiceNote: "This is a computer-generated tax invoice and is valid without signature per LHDN guidelines.",
+    receiptNote: "This receipt acknowledges payment received. Please retain for your records.",
+    projectSite: "Project Site",
+  },
+  ms: {
+    appTitle: "SolarVA PV Systems — Penjana Sebut Harga and Invois",
+    appSubtitle: "Dokumen Solar PV Profesional untuk Pasaran Malaysia",
+    secCompany: "Maklumat Syarikat",
+    secCustomer: "Maklumat Pelanggan",
+    secDoc: "Butiran Dokumen",
+    secItems: "Barangan and Perkhidmatan",
+    secTerms: "Terma and Syarat",
+    lblCompanyName: "Nama Syarikat", lblSSM: "No. Pendaftaran SSM", lblRegAddr: "Alamat Berdaftar",
+    lblPhone: "Telefon", lblEmail: "Emel", lblWebsite: "Laman Web",
+    lblCustName: "Nama Pelanggan / Syarikat", lblCustIC: "No. KP / Pendaftaran Perniagaan", lblCustAddr: "Alamat",
+    lblCustPhone: "Telefon", lblCustEmail: "Emel", lblProjectSite: "Lokasi Projek",
+    lblDocNo: "No. Dokumen", lblDate: "Tarikh", lblValidity: "Sah (hari)",
+    lblDueDate: "Tarikh Matang", lblPayMethod: "Kaedah Bayaran", lblBank: "Butiran Akaun Bank",
+    lblReceiptNo: "No. Resit", lblPaid: "Jumlah Dibayar (MYR)", lblRefInvoice: "No. Invois Rujukan",
+    thNo: "#", thDesc: "Penerangan", thQty: "Kuantiti", thUnit: "Harga Unit (MYR)", thDisc: "Dis %", thAmount: "Jumlah (MYR)",
+    lblSubtotal: "Jumlah Kasar", lblSST: "SST (10%)", lblGrand: "Jumlah Keseluruhan",
+    quotation: "Sebut Harga", invoice: "Invois Cukai", receipt: "Resit Rasmi",
+    docTo: "Kepada", docFrom: "Daripada", docNo: "No. Dokumen", docDate: "Tarikh",
+    validUntil: "Sah Sehingga", dueDate: "Tarikh Matang", payMethod: "Kaedah Bayaran",
+    bankDetails: "Butiran Bank", receiptNo: "No. Resit", amountPaid: "Jumlah Dibayar", balance: "Baki",
+    thankYou: "Terima kasih atas perniagaan anda!",
+    authorizedBy: "Tandatangan Berkuasa and Cop Syarikat",
+    customerSign: "Tandatangan Pelanggan and Tarikh",
+    page: "Muka", of: "daripada",
+    subtotal: "Jumlah Kasar", sst: "SST (10%)", grandTotal: "Jumlah Keseluruhan",
+    termsTitle: "Terma and Syarat",
+    warranty: "Waranti", notes: "Nota",
+    paidStamp: "DIBAYAR",
+    ssmLabel: "No. SSM", companyReg: "(No. Syarikat 201703436477-D)",
+    taxInvoiceNote: "Ini adalah invois cukai yang dijana komputer dan sah tanpa tandatangan mengikut garis panduan LHDN.",
+    receiptNote: "Resit ini mengesahkan pembayaran diterima. Sila simpan untuk rekod anda.",
+    projectSite: "Lokasi Projek",
+  }
+};
+
+let currentLang = 'en';
+let currentTab = 'quotation';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  applyTexts();
+}
+
+function applyTexts() {
+  const base = TEXTS[currentLang === 'both' ? 'en' : currentLang];
+  for (const [key, val] of Object.entries(base)) {
+    const el = document.getElementById(key);
+    if (el) {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        if (!el.value && el.placeholder) el.placeholder = val;
+      } else {
+        el.textContent = val;
+      }
+    }
+  }
+}
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.doc-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+
+  document.getElementById('validityGroup').classList.toggle('hidden', tab !== 'quotation');
+  document.getElementById('dueDateGroup').classList.toggle('hidden', tab === 'quotation');
+  document.getElementById('paymentMethodGroup').classList.toggle('hidden', tab === 'quotation');
+  document.getElementById('bankDetailsGroup').classList.toggle('hidden', tab === 'quotation');
+  document.getElementById('receiptNoGroup').classList.toggle('hidden', tab !== 'receipt');
+  document.getElementById('paidAmountGroup').classList.toggle('hidden', tab !== 'receipt');
+  document.getElementById('refInvoiceGroup').classList.toggle('hidden', tab !== 'receipt');
+
+  const docNo = document.getElementById('docNo');
+  if (!docNo.value || /^[A-Z]{2}-/.test(docNo.value)) {
+    const prefix = tab === 'quotation' ? 'QT' : tab === 'invoice' ? 'IV' : 'RC';
+    const date = new Date();
+    const num = String(Math.floor(Math.random() * 900) + 100);
+    docNo.value = prefix + '-' + date.getFullYear() + '-' + num;
+  }
+}
+
+function addTemplate(type) {
+  const t = TEMPLATES[type];
+  if (!t) return;
+  const tbody = document.getElementById('itemsBody');
+  const row = document.createElement('tr');
+  const idx = tbody.children.length + 1;
+  row.innerHTML = `
+    <td>${idx}</td>
+    <td><input type="text" class="item-desc" value="${t.desc}"></td>
+    <td class="center-col"><input type="number" class="item-qty" value="${t.qty}" min="0" step="1"></td>
+    <td class="num-col"><input type="number" class="item-price" value="${t.price.toFixed(2)}" min="0" step="0.01"></td>
+    <td class="center-col"><input type="number" class="item-disc" value="${t.disc}" min="0" max="100" step="0.01"></td>
+    <td class="item-amount num-col">0.00</td>
+    <td class="action-col"><button class="btn-remove" onclick="removeRow(this)">×</button></td>
+  `;
+  tbody.appendChild(row);
+  attachListeners(row);
+  calculate();
+}
+
+function addRow() {
+  const tbody = document.getElementById('itemsBody');
+  const row = document.createElement('tr');
+  const idx = tbody.children.length + 1;
+  row.innerHTML = `
+    <td>${idx}</td>
+    <td><input type="text" class="item-desc" placeholder="Item description / Penerangan barangan"></td>
+    <td class="center-col"><input type="number" class="item-qty" value="1" min="0" step="1"></td>
+    <td class="num-col"><input type="number" class="item-price" value="0.00" min="0" step="0.01"></td>
+    <td class="center-col"><input type="number" class="item-disc" value="0" min="0" max="100" step="0.01"></td>
+    <td class="item-amount num-col">0.00</td>
+    <td class="action-col"><button class="btn-remove" onclick="removeRow(this)">×</button></td>
+  `;
+  tbody.appendChild(row);
+  attachListeners(row);
+  calculate();
+}
+
+function removeRow(btn) {
+  const tbody = document.getElementById('itemsBody');
+  if (tbody.children.length > 1) {
+    btn.closest('tr').remove();
+    renumber();
+    calculate();
+  }
+}
+
+function renumber() {
+  document.querySelectorAll('#itemsBody tr').forEach((tr, i) => { tr.cells[0].textContent = i + 1; });
+}
+
+function attachListeners(row) {
+  row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', calculate));
+}
+
+function calculate() {
+  let subtotal = 0;
+  document.querySelectorAll('#itemsBody tr').forEach(tr => {
+    const qty = parseFloat(tr.querySelector('.item-qty').value) || 0;
+    const price = parseFloat(tr.querySelector('.item-price').value) || 0;
+    const disc = parseFloat(tr.querySelector('.item-disc').value) || 0;
+    const amount = qty * price * (1 - disc / 100);
+    tr.querySelector('.item-amount').textContent = amount.toFixed(2);
+    subtotal += amount;
+  });
+  const sstEnabled = document.getElementById('sstToggle').checked;
+  const sst = sstEnabled ? subtotal * 0.10 : 0;
+  const grand = subtotal + sst;
+  document.getElementById('subtotal').textContent = 'MYR ' + subtotal.toFixed(2);
+  document.getElementById('sstAmount').textContent = 'MYR ' + sst.toFixed(2);
+  document.getElementById('grandTotal').textContent = 'MYR ' + grand.toFixed(2);
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const date = new Date(d + 'T00:00:00');
+  return date.toLocaleDateString('en-MY', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function generatePreview() {
+  const en = TEXTS.en;
+  const ms = TEXTS.ms;
+  const both = currentLang === 'both';
+  const t = both ? en : TEXTS[currentLang];
+
+  const companyName = document.getElementById('companyName').value;
+  const ssm = document.getElementById('ssmNo').value;
+  const regAddr = document.getElementById('regAddress').value.replace(/\n/g, '<br>');
+  const compPhone = document.getElementById('companyPhone').value;
+  const compEmail = document.getElementById('companyEmail').value;
+  const compWeb = document.getElementById('companyWebsite').value;
+
+  const custName = document.getElementById('custName').value || 'Customer Name';
+  const custIC = document.getElementById('custIC').value;
+  const custAddr = document.getElementById('custAddress').value.replace(/\n/g, '<br>') || 'Customer Address';
+  const custPhone = document.getElementById('custPhone').value;
+  const custEmail = document.getElementById('custEmail').value;
+  const projectSite = document.getElementById('projectSite').value;
+
+  const docNo = document.getElementById('docNo').value;
+  const docDate = formatDate(document.getElementById('docDate').value);
+  const validity = document.getElementById('validityDays').value;
+  const dueDate = formatDate(document.getElementById('dueDate').value);
+  const payMethod = document.getElementById('paymentMethod').value;
+  const bankDetails = document.getElementById('bankDetails').value;
+  const receiptNo = document.getElementById('receiptNo').value;
+  const paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
+  const refInvoice = document.getElementById('refInvoice').value;
+  const terms = document.getElementById('termsText').value;
+
+  let itemsHTML = '';
+  let subtotal = 0;
+  document.querySelectorAll('#itemsBody tr').forEach((tr, i) => {
+    const desc = tr.querySelector('.item-desc').value || 'Item ' + (i + 1);
+    const qty = parseFloat(tr.querySelector('.item-qty').value) || 0;
+    const price = parseFloat(tr.querySelector('.item-price').value) || 0;
+    const disc = parseFloat(tr.querySelector('.item-disc').value) || 0;
+    const amount = qty * price * (1 - disc / 100);
+    subtotal += amount;
+    itemsHTML += `
+      <tr>
+        <td class="center">${i + 1}</td>
+        <td class="desc-cell">${desc}</td>
+        <td class="center">${qty}</td>
+        <td class="right">${price.toFixed(2)}</td>
+        <td class="center">${disc > 0 ? disc.toFixed(2) + '%' : '-'}</td>
+        <td class="right">${amount.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  const sstEnabled = document.getElementById('sstToggle').checked;
+  const sst = sstEnabled ? subtotal * 0.10 : 0;
+  const grand = subtotal + sst;
+  const balance = grand - paidAmount;
+
+  const docTypeEn = currentTab === 'quotation' ? en.quotation : currentTab === 'invoice' ? en.invoice : en.receipt;
+  const docTypeMs = currentTab === 'quotation' ? ms.quotation : currentTab === 'invoice' ? ms.invoice : ms.receipt;
+
+  let extraMeta = '';
+  if (currentTab === 'quotation') {
+    const validDate = new Date();
+    validDate.setDate(validDate.getDate() + parseInt(validity || 30));
+    extraMeta = '<div><strong>' + (both ? en.validUntil + ' / ' + ms.validUntil : t.validUntil) + ':</strong> ' + formatDate(validDate.toISOString().split('T')[0]) + '</div>';
+  } else if (currentTab === 'invoice') {
+    extraMeta = '<div><strong>' + (both ? en.dueDate + ' / ' + ms.dueDate : t.dueDate) + ':</strong> ' + (dueDate || 'Immediate / Segera') + '</div>' +
+                '<div><strong>' + (both ? en.payMethod + ' / ' + ms.payMethod : t.payMethod) + ':</strong> ' + payMethod + '</div>';
+  } else if (currentTab === 'receipt') {
+    extraMeta = '<div><strong>' + (both ? en.receiptNo + ' / ' + ms.receiptNo : t.receiptNo) + ':</strong> ' + receiptNo + '</div>' +
+                (refInvoice ? '<div><strong>' + (both ? en.lblRefInvoice + ' / ' + ms.lblRefInvoice : t.lblRefInvoice) + ':</strong> ' + refInvoice + '</div>' : '') +
+                '<div><strong>' + (both ? en.payMethod + ' / ' + ms.payMethod : t.payMethod) + ':</strong> ' + payMethod + '</div>' +
+                '<div><strong>' + (both ? en.amountPaid + ' / ' + ms.amountPaid : t.amountPaid) + ':</strong> MYR ' + paidAmount.toFixed(2) + '</div>' +
+                '<div><strong>' + (both ? en.balance + ' / ' + ms.balance : t.balance) + ':</strong> MYR ' + balance.toFixed(2) + '</div>';
+  }
+
+  const watermark = currentTab === 'receipt' && paidAmount >= grand ? '<div class="watermark-paid">' + (both ? en.paidStamp + ' / ' + ms.paidStamp : t.paidStamp) + '</div>' : '';
+
+  const bankSection = (currentTab === 'invoice' || currentTab === 'receipt') && bankDetails ? `
+    <div class="bank-box">
+      <h4>${both ? en.bankDetails + ' / ' + ms.bankDetails : t.bankDetails}</h4>
+      <pre>${bankDetails.replace(/\n/g, '<br>')}</pre>
+    </div>
+  ` : '';
+
+  const noteSection = currentTab === 'invoice' ? `
+    <div style="margin-top:14px;font-size:11px;color:#666;text-align:center;font-style:italic;">${both ? en.taxInvoiceNote + '<br>' + ms.taxInvoiceNote : t.taxInvoiceNote}</div>
+  ` : currentTab === 'receipt' ? `
+    <div style="margin-top:14px;font-size:11px;color:#666;text-align:center;font-style:italic;">${both ? en.receiptNote + '<br>' + ms.receiptNote : t.receiptNote}</div>
+  ` : '';
+
+  const projectSiteLine = projectSite ? '<div style="margin-top:4px;font-size:12px;color:#4b5563;"><strong>' + (both ? en.projectSite + ' / ' + ms.projectSite : t.projectSite) + ':</strong> ' + projectSite + '</div>' : '';
+
+  const previewHTML = watermark + `
+    <div class="letterhead">
+      <div class="crest-wrap">${CREST_SVG}</div>
+      <div class="company-info">
+        <h2>SOLARVA PV SYSTEMS</h2>
+        <div class="tagline">A subsidiary of MK Rich Sdn Bhd / Anak syarikat MK Rich Sdn Bhd</div>
+        <div class="sub">${regAddr}</div>
+        <div class="sub">Tel: ${compPhone} | Emel: ${compEmail} | Web: ${compWeb}</div>
+        <div class="ssm">${both ? en.ssmLabel + ' / ' + ms.ssmLabel : t.ssmLabel}: ${ssm} ${both ? en.companyReg + ' / ' + ms.companyReg : t.companyReg}</div>
+      </div>
+    </div>
+
+    <div class="doc-title">${docTypeEn}${both ? ' / ' + docTypeMs : ''}</div>
+    <div class="doc-subtitle">${both ? 'Malaysian Solar PV Solutions / Penyelesaian Solar PV Malaysia' : (currentLang === 'ms' ? 'Penyelesaian Solar PV Malaysia' : 'Malaysian Solar PV Solutions')}</div>
+
+    <div class="doc-meta">
+      <div class="left">
+        <div><strong>${both ? en.docTo + ' / ' + ms.docTo : t.docTo}:</strong></div>
+        <div class="cust-name">${custName}</div>
+        <div>${custIC ? (both ? 'IC/Biz No / No. KP/Perniagaan: ' : 'IC/Biz No: ') + custIC : ''}</div>
+        <div>${custAddr}</div>
+        <div>${custPhone ? 'Tel: ' + custPhone : ''}${custEmail ? ' | Emel: ' + custEmail : ''}</div>
+        ${projectSiteLine}
+      </div>
+      <div class="right">
+        <div><strong>${both ? en.docNo + ' / ' + ms.docNo : t.docNo}:</strong> ${docNo}</div>
+        <div><strong>${both ? en.docDate + ' / ' + ms.docDate : t.docDate}:</strong> ${docDate || formatDate(new Date().toISOString().split('T')[0])}</div>
+        ${extraMeta}
+      </div>
+    </div>
+
+    <table class="preview-table">
+      <thead>
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>${both ? en.thDesc + ' / ' + ms.thDesc : t.thDesc}</th>
+          <th style="width:60px;">${both ? en.thQty + ' / ' + ms.thQty : t.thQty}</th>
+          <th style="width:110px;">${both ? en.thUnit + ' / ' + ms.thUnit : t.thUnit}</th>
+          <th style="width:60px;">${both ? en.thDisc + ' / ' + ms.thDisc : t.thDisc}</th>
+          <th style="width:120px;">${both ? en.thAmount + ' / ' + ms.thAmount : t.thAmount}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHTML}
+      </tbody>
+    </table>
+
+    <div class="preview-totals">
+      <div class="row"><span>${both ? en.subtotal + ' / ' + ms.subtotal : t.subtotal}</span><span class="val">MYR ${subtotal.toFixed(2)}</span></div>
+      ${sstEnabled ? '<div class="row"><span>' + (both ? en.sst + ' / ' + ms.sst : t.sst) + '</span><span class="val">MYR ' + sst.toFixed(2) + '</span></div>' : ''}
+      <div class="row grand"><span>${both ? en.grandTotal + ' / ' + ms.grandTotal : t.grandTotal}</span><span class="val">MYR ${grand.toFixed(2)}</span></div>
+    </div>
+
+    <div class="terms-box">
+      <h4>${both ? en.termsTitle + ' / ' + ms.termsTitle : t.termsTitle}</h4>
+      <pre>${terms.replace(/\n/g, '<br>')}</pre>
+    </div>
+
+    ${bankSection}
+
+    <div class="signature-area">
+      <div class="sig-box">
+        <div class="sig-line">${both ? en.authorizedBy + '<br>' + ms.authorizedBy : t.authorizedBy}</div>
+        <div class="role">SolarVA PV Systems<br>MK Rich Sdn Bhd</div>
+        <div class="date-line">Date / Tarikh: _______________</div>
+      </div>
+      <div class="sig-box">
+        <div class="sig-line">${both ? en.customerSign + '<br>' + ms.customerSign : t.customerSign}</div>
+        <div class="role">${custName}</div>
+        <div class="date-line">Date / Tarikh: _______________</div>
+      </div>
+    </div>
+
+    ${noteSection}
+
+    <div class="footer-stamp">
+      <strong>SOLARVA PV SYSTEMS</strong> — A subsidiary of MK Rich Sdn Bhd (${both ? 'SSM No. / No. SSM' : t.ssmLabel}: 201703436477)<br>
+      ${both ? en.thankYou + '<br>' + ms.thankYou : t.thankYou}<br>
+      <em>This document is issued under Malaysian business regulations. / Dokumen ini dikeluarkan di bawah peraturan perniagaan Malaysia.</em>
+    </div>
+  `;
+
+  const preview = document.getElementById('docPreview');
+  document.getElementById('previewContent').innerHTML = previewHTML;
+  preview.classList.add('active');
+  preview.scrollIntoView({ behavior: 'smooth' });
+}
+
+function downloadHTML() {
+  const html = document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'solarva-generator.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetForm() {
+  document.getElementById('custName').value = '';
+  document.getElementById('custIC').value = '';
+  document.getElementById('custAddress').value = '';
+  document.getElementById('custPhone').value = '';
+  document.getElementById('custEmail').value = '';
+  document.getElementById('projectSite').value = '';
+  document.getElementById('docNo').value = '';
+  document.getElementById('docDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('itemsBody').innerHTML = `
+    <tr>
+      <td>1</td>
+      <td><input type="text" class="item-desc" value="Solar Panel 550W Mono PERC (Tier 1)"></td>
+      <td class="center-col"><input type="number" class="item-qty" value="10" min="0" step="1"></td>
+      <td class="num-col"><input type="number" class="item-price" value="850.00" min="0" step="0.01"></td>
+      <td class="center-col"><input type="number" class="item-disc" value="5" min="0" max="100" step="0.01"></td>
+      <td class="item-amount num-col">0.00</td>
+      <td class="action-col"><button class="btn-remove" onclick="removeRow(this)">×</button></td>
+    </tr>
+  `;
+  attachListeners(document.querySelector('#itemsBody tr'));
+  calculate();
+  document.getElementById('docPreview').classList.remove('active');
+}
+
+// Init
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('docDate').value = today;
+document.getElementById('dueDate').value = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+document.querySelectorAll('#itemsBody tr').forEach(attachListeners);
+calculate();
+setTab('quotation');
+</script>
+</body>
+</html>
